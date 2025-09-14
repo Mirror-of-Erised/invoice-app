@@ -1,7 +1,5 @@
 """Minimal Nostr client stub (Python)"""
 import os
-import json
-
 
 class NostrClient:
     def __init__(self, relays: list[str] | None = None):

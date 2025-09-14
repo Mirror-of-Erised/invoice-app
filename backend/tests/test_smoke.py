@@ -1,3 +1,4 @@
 def test_imports():
-    import app  # just make sure the package loads
-    assert True
+    import importlib
+    m = importlib.import_module("app")
+    assert m is not None
