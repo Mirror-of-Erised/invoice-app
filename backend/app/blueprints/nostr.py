@@ -9,7 +9,10 @@ nostr_bp = Blueprint("nostr", __name__)
 def publish():
     payload = request.json or {}
     client = NostrClient()
-    result = client.publish_event(kind=payload.get("kind", 1),
-                                    content=payload.get("content", ""),
-                                    tags=payload.get("tags", []))
+    result = client.publish_event(
+        kind=payload.get("kind", 1),
+        content=payload.get("content", ""),
+        tags=payload.get("tags", []),
+)
+
     return {"ok": True, "result": result}
