@@ -13,6 +13,6 @@ def publish():
         kind=payload.get("kind", 1),
         content=payload.get("content", ""),
         tags=payload.get("tags", []),
-)
+    )
 
     return {"ok": True, "result": result}
