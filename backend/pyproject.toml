@@ -1,0 +1,5 @@
+[project]
+name = "invoice_app_backend"
+version = "0.1.0"
+description = "Flask backend for Invoice App"
+requires-python = ">=3.11"
