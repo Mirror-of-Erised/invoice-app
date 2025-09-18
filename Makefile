@@ -12,10 +12,15 @@ dev-backend:
 
 # Run just the frontend
 dev-frontend:
-	cd frontend && npm run dev -- --host
+	cd frontend && npm run dev -- --host --port=5175
 
 # Stop Flask + React started by "make dev"
+.PHONY: stop
 stop:
-	@if [ -f .flask_pid ]; then kill $$(cat .flask_pid) || true; rm .flask_pid; fi
-	@if [ -f .vite_pid ]; then kill $$(cat .vite_pid) || true; rm .vite_pid; fi
-	@echo "Stopped Flask + React"
+	- kill -9 $$(lsof -ti:5000) 2>/dev/null || true
+	- kill -9 $$(lsof -ti:5175) 2>/dev/null || true
+	- pkill -f "python3 -m app.main" 2>/dev/null || true
+	- rm -f .flask_pid .vite_pid
+
+
+
