@@ -1,4 +1,5 @@
 """Minimal Nostr client stub (Python)"""
+
 import os
 
 
@@ -8,5 +9,4 @@ class NostrClient:
 
     def publish_event(self, kind: int, content: str, tags: list[list[str]] | None = None):
         # TODO: sign and send over websockets
-        return {"relay_count": len(self.relays), "kind": kind,
-                "content": content, "tags": tags or []}
+        return {"relay_count": len(self.relays), "kind": kind, "content": content, "tags": tags or []}
