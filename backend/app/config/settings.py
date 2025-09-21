@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+
 from dotenv import load_dotenv
 
 
@@ -9,7 +10,9 @@ class Settings:
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./dev.db")
     repo_backend: str = os.getenv("REPO_BACKEND", "sql")
 
+
 settings = Settings()
+
 
 def load_config(app):
     # Try backend/.env first, then project_root/.env

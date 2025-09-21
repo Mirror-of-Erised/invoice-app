@@ -1,7 +1,9 @@
 from typing import Optional
+
+from app.models.customer import Customer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.models.customer import Customer
+
 
 class SqlCustomerRepo:
     def __init__(self, session: Session):

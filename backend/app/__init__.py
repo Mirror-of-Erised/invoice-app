@@ -1,25 +1,26 @@
 from flask import Flask
-from flask_cors import CORS
-
-from .blueprints.invoice import invoice_bp
-from .blueprints.llm import llm_bp
-from .blueprints.nostr import nostr_bp
-from .blueprints.user import user_bp
-from .config.settings import load_config
 
 
-def create_app():
+def create_app() -> Flask:
     app = Flask(__name__)
-    CORS(app)
-    load_config(app)
+    app.url_map.strict_slashes = False
 
-    app.register_blueprint(user_bp, url_prefix="/api/user")
-    app.register_blueprint(invoice_bp, url_prefix="/api/invoice")
-    app.register_blueprint(llm_bp, url_prefix="/api/llm")
-    app.register_blueprint(nostr_bp, url_prefix="/api/nostr")
+    @app.teardown_appcontext
+    def remove_session(_=None):
+        try:
+            from app.db.engine import SessionLocal
 
-    @app.route("/api/health")
-    def health():
-        return {"status": "ok"}
+            SessionLocal.remove()
+
+        except Exception:
+            pass
+
+    from app.api.health import bp as health_bp
+
+    app.register_blueprint(health_bp, url_prefix="/api")
+
+    from app.api.customers import bp as customers_bp
+
+    app.register_blueprint(customers_bp, url_prefix="/api/customers")
 
     return app
