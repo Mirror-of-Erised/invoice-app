@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.models.invoice import Invoice
 
+
 class SqlInvoiceRepo:
     def __init__(self, session: Session):
         self.session = session
