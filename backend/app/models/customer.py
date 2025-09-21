@@ -1,21 +1,20 @@
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-from uuid import uuid4
-
+# app/models/customer.py
+import uuid
+from datetime import datetime
+from sqlalchemy import Column, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from app.db.base import Base
-from sqlalchemy import ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-if TYPE_CHECKING:
-    from .organization import Organization  # type-only import
-
 
 class Customer(Base):
     __tablename__ = "customers"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid4()))
-    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False)
-    name: Mapped[str] = mapped_column(String, nullable=False)
+    id = Column(String(36), primary_key=True, nullable=False, default=lambda: str(uuid.uuid4()))
+    organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
 
-    organization: Mapped["Organization"] = relationship(back_populates="customers")
+    # add defaults
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    organization = relationship("Organization", back_populates="customers")
+    invoices = relationship("Invoice", back_populates="customer", cascade="all, delete-orphan")

@@ -1,4 +1,5 @@
 from flask import Flask
+from app.api.invoices import bp as invoices_bp
 
 
 def create_app() -> Flask:
@@ -22,5 +23,7 @@ def create_app() -> Flask:
     from app.api.customers import bp as customers_bp
 
     app.register_blueprint(customers_bp, url_prefix="/api/customers")
+
+    app.register_blueprint(invoices_bp, url_prefix="/api/invoices")
 
     return app
