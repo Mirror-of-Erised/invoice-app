@@ -2,7 +2,7 @@
 # Invoice App — Modular Monolith
 
 
-**Stack**: React (Vite + TS) · Flask · Nostr stubs · Docker
+**Stack**: React (Vite + TS) · Flask · Nostr stubs
 
 
 ## Quick Start
