@@ -1,7 +1,8 @@
 from app.config.settings import settings
 from flask import Blueprint, jsonify, request
 
-bp = Blueprint("customers", __name__)
+
+bp = Blueprint("customers", __name__, url_prefix="/api/customers")
 
 
 def _get_repo():
