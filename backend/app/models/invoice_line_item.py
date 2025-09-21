@@ -1,9 +1,9 @@
 # app/models/invoice_line_item.py
 import uuid
-from datetime import datetime
 from sqlalchemy import Column, String, Numeric, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from app.db.base import Base
+
 
 class InvoiceLineItem(Base):
     __tablename__ = "invoice_line_items"

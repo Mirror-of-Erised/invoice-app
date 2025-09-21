@@ -1,9 +1,9 @@
 # app/models/invoice.py
 import uuid
-from datetime import datetime
 from sqlalchemy import Column, String, Date, Numeric, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from app.db.base import Base
+
 
 
 class Invoice(Base):
@@ -13,6 +13,7 @@ class Invoice(Base):
                 default=lambda: str(uuid.uuid4()))
     organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=False)
     customer_id = Column(String(36), ForeignKey("customers.id"), nullable=False)
+
 
     number = Column(String(64), nullable=False)
     issue_date = Column(Date, nullable=False)
