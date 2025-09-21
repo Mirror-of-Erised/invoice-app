@@ -1,4 +1,5 @@
 from flask import Blueprint, request
+
 invoice_bp = Blueprint("invoice", __name__)
 
 
@@ -10,5 +11,5 @@ def hello_invoice():
 @invoice_bp.post("/create")
 def create_invoice():
     data = request.json or {}
-# TODO: validate & persist
+    # TODO: validate & persist
     return {"ok": True, "invoice": data}, 201

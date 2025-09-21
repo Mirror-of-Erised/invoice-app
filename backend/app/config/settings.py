@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 
@@ -19,8 +20,6 @@ def load_config(app):
         {
             "ENV": os.getenv("ENV", "development"),
             "SECRET_KEY": os.getenv("SECRET_KEY", "dev-secret"),
-            "SQLALCHEMY_DATABASE_URI": os.getenv(
-                "DATABASE_URL", "sqlite:///dev.db"
-            ),
+            "SQLALCHEMY_DATABASE_URI": os.getenv("DATABASE_URL", "sqlite:///dev.db"),
         }
     )

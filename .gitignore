@@ -23,3 +23,10 @@ frontend/.vite/
 # Dev PIDs
 .flask_pid
 .vite_pid
+
+# Python caches
+__pycache__/
+*.pyc
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/

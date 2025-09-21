@@ -1,6 +1,6 @@
 from flask import Blueprint, request
-from ..services.nostr_client import NostrClient
 
+from ..services.nostr_client import NostrClient
 
 nostr_bp = Blueprint("nostr", __name__)
 

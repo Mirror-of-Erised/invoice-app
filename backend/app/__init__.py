@@ -1,11 +1,11 @@
 from flask import Flask
 from flask_cors import CORS
 
-from .config.settings import load_config
-from .blueprints.user import user_bp
 from .blueprints.invoice import invoice_bp
 from .blueprints.llm import llm_bp
 from .blueprints.nostr import nostr_bp
+from .blueprints.user import user_bp
+from .config.settings import load_config
 
 
 def create_app():
