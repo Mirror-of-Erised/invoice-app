@@ -6,12 +6,12 @@ from app.config.settings import settings
 bp = Blueprint("invoices", __name__)
 
 
-
 def _get_repo():
     if settings.repo_backend == "sql":
         from app.db.session import get_session
         from app.repositories.sql.invoice_repo import SqlInvoiceRepo
         return get_session(), SqlInvoiceRepo
+
     else:
         raise NotImplementedError("Memory repo not implemented for invoices")
 
