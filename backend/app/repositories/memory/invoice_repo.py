@@ -1,6 +1,7 @@
 # backend/app/repositories/memory/invoice_repo.py
 from typing import List, Dict, Any
 
+
 class InvoiceRepoMemory:
     def __init__(self):
         self._rows: List[Dict[str, Any]] = []
