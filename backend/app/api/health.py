@@ -1,10 +1,9 @@
 from __future__ import annotations
+from fastapi import APIRouter
 
-from flask import Blueprint, jsonify
+router = APIRouter(tags=["health"])
 
-bp = Blueprint("health", __name__)
-
-
-@bp.get("/health")
+@router.get("health")
+@router.get("/health")
 def health():
-    return jsonify({"status": "ok"})
+    return {"status": "ok"}

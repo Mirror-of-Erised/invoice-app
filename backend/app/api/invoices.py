@@ -1,36 +1,20 @@
 from __future__ import annotations
-from flask import Blueprint, jsonify, request
-from app.config.settings import settings
 
+from typing import Annotated
 
-bp = Blueprint("invoices", __name__)
+from fastapi import APIRouter, Depends
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
+from app.api.deps import get_db
 
-def _get_repo():
-    if settings.repo_backend == "sql":
-        from app.db.session import get_session
-        from app.repositories.sql.invoice_repo import SqlInvoiceRepo
-        return get_session(), SqlInvoiceRepo
+DB = Annotated[Session, Depends(get_db)]
+router = APIRouter(prefix="/invoices", tags=["invoices"])
 
-    else:
-        raise NotImplementedError("Memory repo not implemented for invoices")
-
-
-@bp.get("")
-@bp.get("/")
-def list_invoices():
-    cm, Repo = _get_repo()
-    org = request.args.get("organization_id")
-    customer = request.args.get("customer_id")
-    with cm as s:
-        return jsonify(Repo(s).list(organization_id=org, customer_id=customer))
-
-
-@bp.post("")
-@bp.post("/")
-def create_invoice():
-    data = request.get_json() or {}
-    cm, Repo = _get_repo()
-    with cm as s:
-        created = Repo(s).create(data)
-        return jsonify(created), 201
+@router.get("")
+@router.get("/")
+def list_invoices(db: DB):
+    rows = db.execute(
+        text("SELECT invoice_number, total FROM invoices ORDER BY invoice_number")
+    ).all()
+    return [{"invoice_number": r[0], "total": str(r[1])} for r in rows]
