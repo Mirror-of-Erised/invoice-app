@@ -9,6 +9,4 @@ class InvoiceRepoSQL:
         self.db = db
 
     def list_invoice_summaries(self):
-        return self.db.execute(
-            text("SELECT invoice_number, total FROM invoices ORDER BY invoice_number")
-        ).all()
+        return self.db.execute(text("SELECT invoice_number, total FROM invoices ORDER BY invoice_number")).all()

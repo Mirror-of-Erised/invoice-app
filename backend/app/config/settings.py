@@ -33,8 +33,7 @@ class Settings:
     # repo backend selection
     # prefer USE_SQL_REPOS=1/true/yes to flip; fallback to REPO_BACKEND if present
     repo_backend: Literal["sql", "memory"] = (
-        "sql" if _to_bool(os.getenv("USE_SQL_REPOS", "true"), default=True)
-        else "memory"
+        "sql" if _to_bool(os.getenv("USE_SQL_REPOS", "true"), default=True) else "memory"
     )
 
     @property

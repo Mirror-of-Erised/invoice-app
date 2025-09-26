@@ -11,12 +11,17 @@ from app.api.deps import get_db
 DB = Annotated[Session, Depends(get_db)]
 router = APIRouter(prefix="/customers", tags=["customers"])
 
+# Define the param annotations WITHOUT defaults inside Query(...)
+OrgId = Annotated[Optional[str], Query()]                 # default via '= None'
+Limit = Annotated[int, Query(ge=1, le=200)]               # default via '= 50'
+
+
 @router.get("")
 @router.get("/")
 def list_customers(
     db: DB,
-    organization_id: Optional[str] = Query(default=None),
-    limit: int = Query(default=50, ge=1, le=200),
+    organization_id: OrgId = None,    # default set here
+    limit: Limit = 50,                # default set here
 ):
     rows = db.execute(
         text(
@@ -33,6 +38,7 @@ def list_customers(
     return rows
 
 
+@router.post("", status_code=201)
 @router.post("/", status_code=201)
 def create_customer(db: DB, payload: dict[str, Any]):
     row = db.execute(

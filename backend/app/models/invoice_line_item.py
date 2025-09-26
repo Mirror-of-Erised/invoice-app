@@ -8,8 +8,7 @@ from app.db.base import Base
 class InvoiceLineItem(Base):
     __tablename__ = "invoice_line_items"
 
-    id = Column(String(36), primary_key=True, nullable=False,
-                default=lambda: str(uuid.uuid4()))
+    id = Column(String(36), primary_key=True, nullable=False, default=lambda: str(uuid.uuid4()))
     invoice_id = Column(String(36), ForeignKey("invoices.id"), nullable=False)
     description = Column(String(255), nullable=False)
     quantity = Column(Integer, nullable=False)

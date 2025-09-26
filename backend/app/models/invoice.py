@@ -8,8 +8,7 @@ from app.db.base import Base
 class Invoice(Base):
     __tablename__ = "invoices"
 
-    id = Column(String(36), primary_key=True, nullable=False,
-                default=lambda: str(uuid.uuid4()))
+    id = Column(String(36), primary_key=True, nullable=False, default=lambda: str(uuid.uuid4()))
     organization_id = Column(String(36), ForeignKey("organizations.id"), nullable=False)
     customer_id = Column(String(36), ForeignKey("customers.id"), nullable=False)
     number = Column(String(64), nullable=False)
