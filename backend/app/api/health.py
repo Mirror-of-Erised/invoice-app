@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 from flask import Blueprint, jsonify
 
+bp = Blueprint("health", __name__)
 
-bp = Blueprint("api", __name__, url_prefix="/api")  # ← remove strict_slashes
 
-
-@bp.get("/health")   # choose no trailing slash
+@bp.get("/health")
 def health():
     return jsonify({"status": "ok"})

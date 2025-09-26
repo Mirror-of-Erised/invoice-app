@@ -35,6 +35,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 config = context.config
 target_metadata = None
 
+
 def run_migrations_offline():
     url = os.environ.get("DATABASE_URL")
     if url:
@@ -46,6 +47,7 @@ def run_migrations_offline():
     with context.begin_transaction():
         context.run_migrations()
 
+
 def run_migrations_online():
     url = os.environ.get("DATABASE_URL")
     if url:
@@ -56,6 +58,7 @@ def run_migrations_online():
         context.configure(connection=connection, target_metadata=target_metadata)
         with context.begin_transaction():
             context.run_migrations()
+
 
 if context.is_offline_mode():
     run_migrations_offline()

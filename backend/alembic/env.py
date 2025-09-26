@@ -45,6 +45,7 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+
 def run_migrations_online() -> None:
     url = os.environ.get("DATABASE_URL")
     if url:
