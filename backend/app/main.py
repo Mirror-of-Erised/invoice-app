@@ -1,6 +1,11 @@
 from app.api.customers import bp as customers_bp
 from app.api.health import bp as health_bp
 from flask import Flask
+from fastapi import FastAPI
+from app.api.routes.invoices import router as invoices_router
+
+app = FastAPI()
+app.include_router(invoices_router)
 
 
 def create_app():

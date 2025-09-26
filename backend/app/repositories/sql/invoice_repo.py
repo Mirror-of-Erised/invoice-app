@@ -3,11 +3,11 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from app.models.invoice import Invoice
-
+from sqlalchemy import text
 
 class SqlInvoiceRepo:
-    def __init__(self, session: Session):
-        self.session = session
+    def __init__(self, db: Session):
+        self.db = db
 
     def list(self, organization_id: Optional[str] = None, customer_id: Optional[str] = None):
         stmt = select(Invoice)
