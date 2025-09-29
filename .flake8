@@ -1,6 +1,6 @@
 [flake8]
 max-line-length = 120
-extend-ignore = W503,W504
+extend-ignore = W503,W504,B008
 # ignore long lines only in Alembic migrations (optional)
 per-file-ignores =
     backend/migrations/*: E501,E121,E122,E126,E127,E128,E201,E202,E402,E501,W291

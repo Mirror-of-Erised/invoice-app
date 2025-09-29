@@ -1,19 +1,43 @@
-from __future__ import annotations
-
-from typing import Annotated
-
-from fastapi import APIRouter, Depends
-from sqlalchemy import text
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from typing import List
+from uuid import UUID
+from app.db.session import get_db
+from app.repos.invoices_sql import InvoiceRepo
+from app.schemas.invoice import InvoiceOut, InvoiceCreate, InvoiceUpdate
 
-from app.api.deps import get_db
 
-DB = Annotated[Session, Depends(get_db)]
-router = APIRouter(prefix="/invoices", tags=["invoices"])
+router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 
 
-@router.get("")
-@router.get("/")
-def list_invoices(db: DB):
-    rows = db.execute(text("SELECT invoice_number, total FROM invoices ORDER BY invoice_number")).all()
-    return [{"invoice_number": r[0], "total": str(r[1])} for r in rows]
+@router.get("", response_model=List[InvoiceOut])
+def list_invoices(limit: int = 100, offset: int = 0, db: Session = Depends(get_db)):
+    return InvoiceRepo(db).list(limit=limit, offset=offset)
+
+
+@router.get("/{invoice_id}", response_model=InvoiceOut)
+def get_invoice(invoice_id: UUID, db: Session = Depends(get_db)):
+    obj = InvoiceRepo(db).get(invoice_id)
+    if not obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
+    return obj
+
+
+@router.post("", response_model=InvoiceOut, status_code=status.HTTP_201_CREATED)
+def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db)):
+    return InvoiceRepo(db).create(payload)
+
+
+@router.patch("/{invoice_id}", response_model=InvoiceOut)
+def update_invoice(invoice_id: UUID, payload: InvoiceUpdate, db: Session = Depends(get_db)):
+    obj = InvoiceRepo(db).update(invoice_id, payload)
+    if not obj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")
+    return obj
+
+
+@router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_invoice(invoice_id: UUID, db: Session = Depends(get_db)):
+    ok = InvoiceRepo(db).delete(invoice_id)
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found")

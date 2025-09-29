@@ -1,35 +1,52 @@
-# backend/app/asgi.py
-from __future__ import annotations
-
-from typing import Annotated
-from typing import Generator
-from fastapi import FastAPI, Depends
-from sqlalchemy import text
+# backend/app/api/invoices.py
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.db.session import SessionLocal
+from uuid import UUID
+
+from app.db import get_db
+from app.repos.invoices_sql import InvoiceRepo
+from app.schemas.invoice import InvoiceCreate, InvoiceOut, InvoiceLineItemCreate, InvoiceLineItemOut
+
+router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 
 
-def get_db() -> Generator[Session, None, None]:
-    db = SessionLocal()
+@router.get("", response_model=list[InvoiceOut])
+def list_invoices(limit: int = 100, offset: int = 0, db: Session = Depends(get_db)):
+    return InvoiceRepo(db).list(limit=limit, offset=offset)
+
+
+@router.get("/{invoice_id}", response_model=InvoiceOut)
+def get_invoice(invoice_id: UUID, db: Session = Depends(get_db)):
+    inv = InvoiceRepo(db).get(invoice_id)
+    if not inv:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return inv
+
+
+@router.post("", response_model=InvoiceOut, status_code=status.HTTP_201_CREATED)
+def create_invoice(payload: InvoiceCreate, db: Session = Depends(get_db)):
     try:
-        yield db
-    finally:
-        db.close()
+        return InvoiceRepo(db).create(payload)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        # handle duplicate number -> 409
+        msg = str(e)
+        if "uq_invoices_number" in msg or "already exists" in msg or "duplicate key value" in msg:
+            raise HTTPException(status_code=409, detail="Invoice number already exists")
+        raise
 
 
-# FastAPI app (ASGI)
-fastapi_app = FastAPI()
-
-# Type alias with dependency (avoids B008)
-DBSession = Annotated[Session, Depends(get_db)]
-
-
-@fastapi_app.get("/invoices")
-def list_invoices(db: DBSession):
-    rows = db.execute(text("SELECT invoice_number, total FROM invoices ORDER BY invoice_number")).all()
-    return [{"invoice_number": r[0], "total": str(r[1])} for r in rows]
+# ----- line items -----
+@router.post("/{invoice_id}/line-items", response_model=InvoiceLineItemOut, status_code=status.HTTP_201_CREATED)
+def add_line_item(invoice_id: UUID, payload: InvoiceLineItemCreate, db: Session = Depends(get_db)):
+    repo = InvoiceRepo(db)
+    item = repo.add_line_item(invoice_id, payload.description, payload.qty, payload.unit_price)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    return item
 
 
-# Compose ASGI app: mount Flask (WSGI) under /flask
-app = FastAPI()
-app.mount("/", fastapi_app)
+@router.get("/{invoice_id}/line-items", response_model=list[InvoiceLineItemOut])
+def list_line_items(invoice_id: UUID, db: Session = Depends(get_db)):
+    return InvoiceRepo(db).list_line_items(invoice_id)

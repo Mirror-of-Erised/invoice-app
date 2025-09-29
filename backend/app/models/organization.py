@@ -1,20 +1,30 @@
-import uuid
-from datetime import datetime
-from sqlalchemy import Column, String, DateTime
-from sqlalchemy.orm import relationship
+from __future__ import annotations
+from typing import TYPE_CHECKING
+from sqlalchemy import String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
+import uuid
+
+if TYPE_CHECKING:
+    from .customer import Customer
+    from .invoice import Invoice  # <-- add for typing only
 
 
 class Organization(Base):
     __tablename__ = "organizations"
 
-    id = Column(String(36), primary_key=True, nullable=False, default=lambda: str(uuid.uuid4()))
-    name = Column(String(255), unique=True, nullable=False)
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
 
-    # already have this one (from earlier):
-    customers = relationship("Customer", back_populates="organization", cascade="all, delete-orphan")
+    # MUST be typed for SQLAlchemy 2.0
+    invoices: Mapped[list["Invoice"]] = relationship(
+        "Invoice",
+        back_populates="organization",
+        cascade="save-update, merge",
+    )
 
-    # add this:
-    invoices = relationship("Invoice", back_populates="organization", cascade="all, delete-orphan")
+    customers: Mapped[list["Customer"]] = relationship(
+        "Customer",
+        back_populates="organization",
+        cascade="save-update, merge",
+    )
