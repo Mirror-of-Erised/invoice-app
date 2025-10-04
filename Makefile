@@ -91,9 +91,12 @@ start-prod: bootstrap
 # Short alias
 up: start
 
-# Seed demo data
+# Seed demo data (load backend/.env so DATABASE_URL is set)
 seed:
-	$(VENVPY) $(APP_DIR)/app/scripts/seed_demo.py
+	@set -a; [ -f "$(APP_DIR)/.env" ] && . "$(APP_DIR)/.env"; set +a; \
+	cd "$(APP_DIR)" && .venv/bin/python -m app.scripts.seed_demo
+
+
 
 # Quick psql shell
 pshell:

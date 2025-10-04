@@ -3,6 +3,7 @@
 
 # Python
 .venv/
+backend/.venv
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -16,9 +17,15 @@ dist/
 build/
 frontend/.vite/
 
+
 # Env
 .env
 *.local
+.env.*
+
+# editor
+.vscode/
+.idea/
 
 # Dev PIDs
 .flask_pid
