@@ -1,6 +1,6 @@
 # backend/app/repos/invoices_sql.py
 from sqlalchemy.orm import Session
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
@@ -14,40 +14,59 @@ class InvoiceRepo:
     def __init__(self, db: Session):
         self.db = db
 
+    # ---------- internal helpers ----------
+    def _ensure_canonical(self, inv: Invoice) -> Invoice:
+        """
+        Legacy fallback no longer required since `number` column was dropped.
+        Kept for interface stability.
+        """
+        return inv
+
+    # ---------- invoices ----------
     def list(self, limit=100, offset=0):
-        return self.db.query(Invoice).offset(offset).limit(limit).all()
+        objs = self.db.query(Invoice).offset(offset).limit(limit).all()
+        return [self._ensure_canonical(o) for o in objs]
 
     def get(self, invoice_id: UUID):
-        return self.db.get(Invoice, invoice_id)
+        obj = self.db.get(Invoice, invoice_id)
+        return self._ensure_canonical(obj)
 
     def create(self, data: InvoiceCreate):
         payload = data.model_dump()
         org_id = payload.get("organization_id")
 
         if org_id is None:
-            # fallback: use the first organization in DB
-            org = self.db.query(Organization).order_by(Organization.created_at.asc()).first()
+            # No created_at on Organization; pick a deterministic default (first by id).
+            org = self.db.query(Organization).order_by(Organization.id.asc()).first()
             if not org:
                 raise ValueError("No organization found; seed an organization first.")
             org_id = org.id
 
+        # ---- required defaults (match NOT NULLs in DB) ----
+        issue = payload.get("issue_date") or date.today()
+        due = payload.get("due_date") or (issue + timedelta(days=30))
+        status = payload.get("status") or "draft"
+
+        # Money fields: keep Decimal-friendly, fall back sanely
+        total = Decimal(str(payload.get("total", "0.00")))
+        subtotal = Decimal(str(payload.get("subtotal", total)))
+        tax_total = Decimal(str(payload.get("tax_total", "0.00")))
+
         inv = Invoice(
-            number=payload["number"],
-            customer_id=payload["customer_id"],
             organization_id=org_id,
-            issue_date=date.today(),
-            status="draft",
-            currency="USD",
-            subtotal=Decimal("0.00"),
-            tax=Decimal("0.00"),
-            total=Decimal(str(payload.get("total") or 0)),
-            created_at=date.today(),
-            updated_at=date.today(),
+            customer_id=payload["customer_id"],
+            invoice_number=payload["invoice_number"],  # canonical
+            issue_date=issue,
+            due_date=due,
+            status=status,
+            subtotal=subtotal,
+            tax_total=tax_total,
+            total=total,
         )
         self.db.add(inv)
         self.db.commit()
         self.db.refresh(inv)
-        return inv
+        return self._ensure_canonical(inv)
 
     # ----- line items -----
     def add_line_item(self, invoice_id: UUID, description: str, qty: float, unit_price: float):
@@ -86,8 +105,15 @@ class InvoiceRepo:
     def _recalc_totals(self, inv: Invoice):
         subtotal = Decimal("0.00")
         for li in inv.line_items:
-            subtotal += Decimal(li.total)
+            subtotal += Decimal(str(li.total))
         inv.subtotal = subtotal
-        inv.tax = Decimal("0.00")  # placeholder; add tax logic later
-        inv.total = inv.subtotal + inv.tax
-        inv.updated_at = date.today()
+        # keep tax simple for now; adjust when tax rules exist
+        inv.tax_total = Decimal("0.00")
+        inv.total = inv.subtotal + inv.tax_total
+        # If updated_at exists and is Date/DateTime, set something reasonable
+        if hasattr(inv, "updated_at"):
+            try:
+                inv.updated_at = date.today()
+            except Exception:
+                # silently ignore if it's a DateTime and you prefer utcnow in your model
+                pass

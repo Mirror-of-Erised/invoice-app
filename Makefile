@@ -10,6 +10,7 @@ NPM          ?= npm
 
 # Derived
 API ?= http://$(HOST):$(PORT)/api
+FRONTEND_PORT ?= 5173   # added
 
 # Auto-pick the first customer / invoice if not provided
 CUSTOMER_ID ?= $(shell curl -s $(API)/customers | jq -r '.[0].id')
@@ -34,7 +35,8 @@ UVICORN := $(VENVPY) -m uvicorn
 .PHONY: bootstrap dev dev-no-reload lint fmt flake dev-tools seed pshell api urls \
         customers invoices create-invoice create-invoice-dup \
         add-line-item line-items smoke test clean clean-venv \
-        start start-backend start-frontend up install start-prod venv-info
+        start start-backend start-frontend up install start-prod venv-info \
+        kill-port kill-frontend kill-all
 
 # --- Setup: create venv + install deps (requirements.txt if present) + ensure fastapi/uvicorn/pytest/psycopg2-binary
 bootstrap:
@@ -61,32 +63,63 @@ fmt: dev-tools
 	-$(VENV)/bin/ruff check $(APP_DIR) --fix
 	-$(VENV)/bin/black $(APP_DIR)
 
+# ---------- Port killers (best-effort, macOS/Linux) ----------
+kill-port:
+	@echo "→ Freeing backend port $(PORT)…"
+	@lsof -ti tcp:$(PORT) 2>/dev/null | xargs -r kill -9 2>/dev/null || true
+	@fuser -k $(PORT)/tcp 2>/dev/null || true
+
+kill-frontend:
+	@echo "→ Freeing frontend port $(FRONTEND_PORT)…"
+	@lsof -ti tcp:$(FRONTEND_PORT) 2>/dev/null | xargs -r kill -9 2>/dev/null || true
+	@fuser -k $(FRONTEND_PORT)/tcp 2>/dev/null || true
+
+kill-all: kill-port kill-frontend
+
 # --- Run FastAPI (backend only) ---
 dev:
 	@$(MAKE) bootstrap
-	@$(VENVPY) -m uvicorn $(MODULE) --reload --host $(HOST) --port $(PORT) --app-dir $(APP_DIR)
+	@$(MAKE) kill-port
+	@bash -c 'trap "echo; echo \"→ Cleaning port $(PORT)…\"; lsof -ti tcp:$(PORT) 2>/dev/null | xargs -r kill -9 2>/dev/null || true; fuser -k $(PORT)/tcp 2>/dev/null || true" INT TERM EXIT; \
+	  $(VENVPY) -m uvicorn $(MODULE) --reload --host $(HOST) --port $(PORT) --app-dir $(APP_DIR); \
+	  trap - INT TERM EXIT'
 
 dev-no-reload:
-	@$(VENVPY) -m uvicorn $(MODULE) --host $(HOST) --port $(PORT) --app-dir $(APP_DIR)
+	@$(MAKE) kill-port
+	@bash -c 'trap "echo; echo \"→ Cleaning port $(PORT)…\"; lsof -ti tcp:$(PORT) 2>/dev/null | xargs -r kill -9 2>/dev/null || true; fuser -k $(PORT)/tcp 2>/dev/null || true" INT TERM EXIT; \
+	  $(VENVPY) -m uvicorn $(MODULE) --host $(HOST) --port $(PORT) --app-dir $(APP_DIR); \
+	  trap - INT TERM EXIT'
 
 # --- Frontend only ---
 start-frontend:
-	@cd "$(FRONTEND_DIR)" && $(NPM) install && $(NPM) run dev
+	@$(MAKE) kill-frontend
+	@bash -c 'trap "echo; echo \"→ Cleaning port $(FRONTEND_PORT)…\"; lsof -ti tcp:$(FRONTEND_PORT) 2>/dev/null | xargs -r kill -9 2>/dev/null || true; fuser -k $(FRONTEND_PORT)/tcp 2>/dev/null || true" INT TERM EXIT; \
+	  cd "$(FRONTEND_DIR)" && $(NPM) install && $(NPM) run dev; \
+	  trap - INT TERM EXIT'
 
 # --- Start both backend (8000) and frontend (5173) together ---
 start: bootstrap
-	@echo "Starting backend on $(HOST):$(PORT) and Vite on 5173..."
+	@echo "Starting backend on $(HOST):$(PORT) and Vite on $(FRONTEND_PORT)…"
+	@$(MAKE) kill-all
 	@bash -c 'set -m; \
+	  trap "echo; echo \"→ Cleaning ports $(PORT) & $(FRONTEND_PORT)…\"; \
+	        lsof -ti tcp:$(PORT) 2>/dev/null | xargs -r kill -9 2>/dev/null || true; \
+	        fuser -k $(PORT)/tcp 2>/dev/null || true; \
+	        lsof -ti tcp:$(FRONTEND_PORT) 2>/dev/null | xargs -r kill -9 2>/dev/null || true; \
+	        fuser -k $(FRONTEND_PORT)/tcp 2>/dev/null || true" INT TERM EXIT; \
 	  ( $(VENVPY) -m uvicorn $(MODULE) --reload --host $(HOST) --port $(PORT) --app-dir $(APP_DIR) ) & \
 	  BACK_PID=$$!; \
 	  ( cd "$(FRONTEND_DIR)" && $(NPM) install && $(NPM) run dev ) & \
 	  FRONT_PID=$$!; \
-	  trap "kill $$BACK_PID $$FRONT_PID 2>/dev/null || true" INT TERM; \
-	  wait'
+	  wait $$BACK_PID $$FRONT_PID; \
+	  trap - INT TERM EXIT'
 
 # Backend only (no reload)
 start-prod: bootstrap
-	@$(VENVPY) -m uvicorn $(MODULE) --host $(HOST) --port $(PORT) --app-dir $(APP_DIR)
+	@$(MAKE) kill-port
+	@bash -c 'trap "echo; echo \"→ Cleaning port $(PORT)…\"; lsof -ti tcp:$(PORT) 2>/dev/null | xargs -r kill -9 2>/dev/null || true; fuser -k $(PORT)/tcp 2>/dev/null || true" INT TERM EXIT; \
+	  $(VENVPY) -m uvicorn $(MODULE) --host $(HOST) --port $(PORT) --app-dir $(APP_DIR); \
+	  trap - INT TERM EXIT'
 
 # Short alias
 up: start
@@ -95,8 +128,6 @@ up: start
 seed:
 	@set -a; [ -f "$(APP_DIR)/.env" ] && . "$(APP_DIR)/.env"; set +a; \
 	cd "$(APP_DIR)" && .venv/bin/python -m app.scripts.seed_demo
-
-
 
 # Quick psql shell
 pshell:
@@ -125,10 +156,10 @@ invoices:
 create-invoice:
 	@echo "Using CUSTOMER_ID=$(CUSTOMER_ID) INV_NUM=$(INV_NUM) TOTAL=$(TOTAL)"
 	@jq -n \
-	  --arg number "$(INV_NUM)" \
+	  --arg invoice_number "$(INV_NUM)" \
 	  --arg cust   "$(CUSTOMER_ID)" \
 	  --arg total  "$(TOTAL)" \
-	  '{number:$number, customer_id:$cust, total:($total|tonumber)}' | \
+	  '{invoice_number:$invoice_number, customer_id:$cust, total:($total|tonumber)}' | \
 	curl -sS -X POST "$(API)/invoices" \
 	  -H "Content-Type: application/json" \
 	  -d @- | jq .
@@ -137,10 +168,10 @@ create-invoice:
 create-invoice-dup:
 	@echo "Posting duplicate invoice number INV-1001 (expect 409)"
 	@jq -n \
-	  --arg number "INV-1001" \
+	  --arg invoice_number "INV-1001" \
 	  --arg cust   "$(CUSTOMER_ID)" \
 	  --arg total  "50" \
-	  '{number:$number, customer_id:$cust, total:($total|tonumber)}' | \
+	  '{invoice_number:$invoice_number, customer_id:$cust, total:($total|tonumber)}' | \
 	curl -i -sS -X POST "$(API)/invoices" \
 	  -H "Content-Type: application/json" \
 	  -d @-

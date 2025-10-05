@@ -1,12 +1,11 @@
 # backend/app/schemas/invoice.py
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
-
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
 # ---------- Line Items ----------
@@ -25,33 +24,57 @@ class InvoiceLineItemOut(InvoiceLineItemCreate):
 
 # ---------- Invoices ----------
 class InvoiceBase(BaseModel):
-    number: str
+    invoice_number: str
     customer_id: UUID
-    organization_id: Optional[UUID] = None
-    issue_date: date
+    total: float
+
+    # Make dates optional and fill them via validator
+    issue_date: Optional[date] = None
     due_date: Optional[date] = None
-    status: str = "draft"
-    subtotal: Optional[Decimal] = Decimal("0")
-    tax_total: Optional[Decimal] = Decimal("0")
-    total: Decimal
+
+    currency: str = "USD"
+    status: str = "draft"  # or Literal[...] if you already use it
+    notes: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _fill_dates(self) -> "InvoiceBase":
+        # default issue_date to today
+        if self.issue_date is None:
+            self.issue_date = date.today()
+        # default due_date to +30 days from issue_date
+        if self.due_date is None:
+            self.due_date = self.issue_date + timedelta(days=30)
+        return self
 
 
 class InvoiceCreate(InvoiceBase):
-    line_items: List[InvoiceLineItemCreate] = []
+    """Fields required to create an invoice.
+
+    We inherit the optional dates/currency defaults from InvoiceBase so clients
+    can omit them.
+    """
+
+    pass
 
 
 class InvoiceUpdate(BaseModel):
-    # all fields optional for PATCH/PUT semantics; adjust if you require stricter behavior
-    number: Optional[str] = None
+    """All fields optional for PATCH/PUT; no arithmetic at class level."""
+
+    invoice_number: Optional[str] = None
     customer_id: Optional[UUID] = None
-    organization_id: Optional[UUID] = None
+    total: Optional[float] = None
     issue_date: Optional[date] = None
     due_date: Optional[date] = None
+    currency: Optional[str] = None
     status: Optional[str] = None
-    subtotal: Optional[Decimal] = None
-    tax_total: Optional[Decimal] = None
-    total: Optional[Decimal] = None
-    line_items: Optional[List[InvoiceLineItemCreate]] = None
+    notes: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _normalize_dates(self) -> "InvoiceUpdate":
+        # If issue_date provided but due_date omitted, infer +30 days
+        if self.issue_date and not self.due_date:
+            self.due_date = self.issue_date + timedelta(days=30)
+        return self
 
 
 class InvoiceOut(InvoiceBase):

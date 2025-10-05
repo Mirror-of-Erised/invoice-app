@@ -1,0 +1,8 @@
+repos:
+- repo: local
+  hooks:
+    - id: protect-alembic-versions
+      name: Block deleting alembic/versions/*
+      entry: bash -lc 'git diff --cached --name-status | awk "$1==\"D\" && $2 ~ /^backend\\/alembic\\/versions\\// { exit 1 }";'
+      language: system
+      pass_filenames: false
